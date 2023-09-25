@@ -1,11 +1,13 @@
 import re
 from helper import *
-
+import pandas as pd
     
-def getMatchID(offset):
+def getMatchIDs(offset):
+    
     # Get matches information
-
-    html = getHTML("https://www.hltv.org/results?offset={}").format(offset)
+   
+    print('Get Match IDs from HLTV...')
+    html = getHTML("https://www.hltv.org/results?offset={}".format(str(offset)))
 
     # Find where the match information are
     matchIDs = re.findall('"(.*?000"><a href="/matches/.*?)"', html)
@@ -16,5 +18,7 @@ def getMatchID(offset):
     # Split in two columns: Id (contains the unique match identifier) and Tittle
     matchIDs = [[matchIDs[i].split('/')[0], matchIDs[i]] for i in range(0, len(matchIDs))]
 
-    return matchIDs
+    # Insert into a pandas DataFrame
+    df = pd.DataFrame(matchIDs, columns=['ID', 'Tittle'])
 
+    return df

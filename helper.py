@@ -1,9 +1,9 @@
 from multiprocessing.dummy import Pool as ThreadPool
 from urllib.request import Request, urlopen
 import urllib.request
-from html import getHTML
 import csv
 import sys
+import re
 
 def getHTML(url):
     # Open the URL
@@ -27,8 +27,3 @@ def getHTML(url):
     except urllib.error.HTTPError as err:
         print("{} for {}".format(err.code, url))
         return None
-
-def endCheck(matchIDs, stop):
-    if stop in matchIDs:
-        return False
-    return True
