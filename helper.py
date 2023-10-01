@@ -1,4 +1,8 @@
-from multiprocessing.dummy import Pool as ThreadPool
+from selenium import webdriver 
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen
 import urllib.request
 import csv
@@ -27,3 +31,25 @@ def getHTML(url):
     except urllib.error.HTTPError as err:
         print("{} for {}".format(err.code, url))
         return None
+
+def getDriverHTML(url):
+    # Set driver options
+    options = Options()
+    options.add_argument('--headless')
+
+    # Set Chrome driver
+    driver = webdriver.Chrome()
+    driver.implicitly_wait(1) # wait 1s
+
+    url = 'https://www.hltv.org/matches/{}'.format(url)
+
+    driver.get(url)
+    
+    # Accepting cookies
+    driver.find_element(By.XPATH, '//*[@id="CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll"]').click()
+
+    response = driver.page_source
+
+    driver.close()
+
+    return response

@@ -37,3 +37,7 @@ MatchIDs = existingMatchIDs.drop_duplicates()
 MatchIDs.to_csv('data\MatchIDs.csv', encoding='utf-8', index=False )
 
 print('Total rows: {}. Total rows after drop duplicates: {}. Total removed rows: {}.'.format(len(existingMatchIDs), len(MatchIDs), len(existingMatchIDs) - len(MatchIDs)))
+
+
+
+### TAMBÉM CONSIGO PEGAR OS PLAYERS. EXEMPLO: https://www.hltv.org/player/13290/demonos

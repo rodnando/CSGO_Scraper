@@ -9,6 +9,10 @@ def getMatchIDs(offset):
     print('Get Match IDs from HLTV...')
     html = getHTML("https://www.hltv.org/results?offset={}".format(str(offset)))
 
+    if html is None:
+        print("Failed for %s" % (offset))
+        return []
+    
     # Find where the match information are
     matchIDs = re.findall('"(.*?000"><a href="/matches/.*?)"', html)
     
