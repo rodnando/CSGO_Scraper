@@ -35,13 +35,11 @@ def getHTML(url):
 def getDriverHTML(url):
     # Set driver options
     options = Options()
-    options.add_argument('--headless')
+    #options.add_argument('--headless')
 
     # Set Chrome driver
     driver = webdriver.Chrome()
-    driver.implicitly_wait(1) # wait 1s
-
-    url = 'https://www.hltv.org/matches/{}'.format(url)
+    driver.implicitly_wait(0.5) # wait 0.5s
 
     driver.get(url)
     
@@ -52,4 +50,6 @@ def getDriverHTML(url):
 
     driver.close()
 
-    return response
+    soup = BeautifulSoup(response, 'html.parser')
+
+    return response, soup

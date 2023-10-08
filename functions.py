@@ -10,7 +10,7 @@ def getMatchIDs(offset):
     html = getHTML("https://www.hltv.org/results?offset={}".format(str(offset)))
 
     if html is None:
-        print("Failed for %s" % (offset))
+        print("Failed for {}".format(offset))
         return []
     
     # Find where the match information are
@@ -26,3 +26,40 @@ def getMatchIDs(offset):
     df = pd.DataFrame(matchIDs, columns=['ID', 'Tittle'])
 
     return df
+
+def getTeamsInfo(soup, html):
+
+    lineups = soup.find_all('div', attrs={'class':'lineups', 'id':'lineups'})
+    lines = lineups[0].find_all('div', attrs={'class':'lineup standard-box'})
+
+
+    teams = list()
+
+    for i, l in enumerate(lines):
+        # Find PlayersInfo (teamName, playerName, playerCountry)
+        lineup = re.findall(r'alt="([^"]+)"\s+class=', str(lines[i]))
+        
+        team = list() # add teamName and playerNames to a list
+
+        if len(lineup) > 11:
+            for l in lineup[:-5]:
+                if l not in team:
+                    team.append(l)
+        else:
+            for l in lineup:
+                team.append(l)
+
+        teamName = team[0]
+
+        teamID = re.findall(r'href="/team/(\d+)/([^"]+)"', str(lines[i]))
+        teamID = teamID[0][0] + '/' + teamID[0][1] if teamID else ''
+
+        teamRank = re.findall(r'#(\d+)', str(lines[i]))
+        teamRank = int(teamRank[0])
+
+        teamCountry = re.findall('class="team{}" title=".*\"'.format(i+1), html)
+        teamCountry = teamCountry[0].replace("\"", '').split('=')[-1]
+
+        teams.append([teamID, teamName, teamCountry])
+    
+        return teams
