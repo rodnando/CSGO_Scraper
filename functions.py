@@ -35,9 +35,9 @@ def getTeamsInfo(soup, html):
 
     teams = list()
 
-    for i, l in enumerate(lines):
+    for i, line in enumerate(lines):
         # Find PlayersInfo (teamName, playerName, playerCountry)
-        lineup = re.findall(r'alt="([^"]+)"\s+class=', str(lines[i]))
+        lineup = re.findall(r'alt="([^"]+)"\s+class=', str(line))
         
         team = list() # add teamName and playerNames to a list
 
@@ -46,15 +46,15 @@ def getTeamsInfo(soup, html):
                 if l not in team:
                     team.append(l)
         else:
-            for l in lineup:
+            for l in lineup[:-5]:
                 team.append(l)
 
         teamName = team[0]
 
-        teamID = re.findall(r'href="/team/(\d+)/([^"]+)"', str(lines[i]))
+        teamID = re.findall(r'href="/team/(\d+)/([^"]+)"', str(line))
         teamID = teamID[0][0] + '/' + teamID[0][1] if teamID else ''
 
-        teamRank = re.findall(r'#(\d+)', str(lines[i]))
+        teamRank = re.findall(r'#(\d+)', str(line))
         teamRank = int(teamRank[0])
 
         teamCountry = re.findall('class="team{}" title=".*\"'.format(i+1), html)
@@ -66,3 +66,33 @@ def getTeamsInfo(soup, html):
         df = pd.DataFrame(teams, columns=['ID', 'TeamName', 'TeamCountry'])
     
     return df
+
+def getPlayersInfo(soup):
+    lineups = soup.find_all('div', attrs={'class':'lineups', 'id':'lineups'})
+    lines = lineups[0].find_all('div', attrs={'class':'lineup standard-box'})
+
+    players = pd.DataFrame() # list to add players info
+
+    for line in lines:
+        lineup = re.findall(r'alt="([^"]+)"\s+class=', str(line))
+
+        player = list() # add players info to a list
+
+        if len(lineup) > 11:
+            for l in lineup[:-5]:
+                if l not in player:
+                    player.append(l)
+        else:
+            for l in lineup[:-5]:
+                player.append(l)
+
+        playersID = [m[0] + '/' + m[1] for m in re.findall(r'href="/player/(\d+)/([^"]+)"', str(line))][:-5]
+        playersName = player[1:]
+        playersCountry = lineup[-5:]
+
+        playerDF = pd.DataFrame([playersID, playersName, playersCountry]).transpose()
+        players = pd.concat([players, playerDF], axis=0)
+
+    players.columns = ['ID','PlayerName','PlayerCountry']
+
+    return players
