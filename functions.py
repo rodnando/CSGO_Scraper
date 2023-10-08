@@ -61,5 +61,8 @@ def getTeamsInfo(soup, html):
         teamCountry = teamCountry[0].replace("\"", '').split('=')[-1]
 
         teams.append([teamID, teamName, teamCountry])
+
+        # Create a Pandas DataFrame
+        df = pd.DataFrame(teams, columns=['ID', 'TeamName', 'TeamCountry'])
     
-    return teams
+    return df
