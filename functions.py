@@ -62,4 +62,4 @@ def getTeamsInfo(soup, html):
 
         teams.append([teamID, teamName, teamCountry])
     
-        return teams
+    return teams
