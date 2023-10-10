@@ -62,16 +62,16 @@ def getTeamsInfo(soup, html):
 
         teams.append([teamID, teamName, teamCountry])
 
-        # Create a Pandas DataFrame
-        df = pd.DataFrame(teams, columns=['ID', 'TeamName', 'TeamCountry'])
+    # Create a Pandas DataFrame
+    teams = pd.DataFrame(teams, columns=['ID', 'Name', 'Country'])
     
-    return df
+    return teams
 
 def getPlayersInfo(soup):
     lineups = soup.find_all('div', attrs={'class':'lineups', 'id':'lineups'})
     lines = lineups[0].find_all('div', attrs={'class':'lineup standard-box'})
 
-    players = pd.DataFrame() # list to add players info
+    players = pd.DataFrame() # DataFrame to add players info
 
     for line in lines:
         lineup = re.findall(r'alt="([^"]+)"\s+class=', str(line))
@@ -86,13 +86,33 @@ def getPlayersInfo(soup):
             for l in lineup[:-5]:
                 player.append(l)
 
-        playersID = [m[0] + '/' + m[1] for m in re.findall(r'href="/player/(\d+)/([^"]+)"', str(line))][:-5]
+        playersID = [m[0] for m in re.findall(r'href="/player/(\d+)/([^"]+)"', str(line))][:-5]
+        playersNickNames = [m[1] for m in re.findall(r'href="/player/(\d+)/([^"]+)"', str(line))][:-5]
         playersName = player[1:]
         playersCountry = lineup[-5:]
 
-        playerDF = pd.DataFrame([playersID, playersName, playersCountry]).transpose()
+        playerDF = pd.DataFrame([playersID, playersNickNames, playersName, playersCountry]).transpose()
         players = pd.concat([players, playerDF], axis=0)
 
-    players.columns = ['ID','PlayerName','PlayerCountry']
+    players.columns = ['ID','NickName','Name','Country']
 
     return players
+
+def getMaps(soup, html):
+    
+    matchMaps = list() # list to add maps played 
+    # Get map names
+    map = re.findall('<div class=\"mapname\">.*</div>', html)
+    maps = [map.replace('<div class="mapname">', '').replace('</div>', '') for map in map]
+    
+    # Get map IDs, you will need this to get stats from all played maps
+    m = soup.find_all('div', attrs={'class':'stats-content'})
+    mapIDs = re.findall('id=\".*\"', str(m))
+    mapIDs = [mapID.replace('id="', '').replace('"', '') for mapID in mapIDs if 'all-content' not in mapID]
+
+    for i in range(0, len(maps)):
+        ms = (mapIDs[i], maps[i])
+
+        matchMaps.append(ms)
+
+    return matchMaps
