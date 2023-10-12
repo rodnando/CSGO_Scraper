@@ -50,9 +50,9 @@ def getTeamsInfo(soup, html):
                 team.append(l)
 
         teamName = team[0]
-
         teamID = re.findall(r'href="/team/(\d+)/([^"]+)"', str(line))
-        teamID = teamID[0][0] + '/' + teamID[0][1] if teamID else ''
+        teamNick = teamID[0][1] if teamID else ''
+        teamID = teamID[0][0] if teamID else ''
 
         teamRank = re.findall(r'#(\d+)', str(line))
         teamRank = int(teamRank[0])
@@ -60,10 +60,10 @@ def getTeamsInfo(soup, html):
         teamCountry = re.findall('class="team{}" title=".*\"'.format(i+1), html)
         teamCountry = teamCountry[0].replace("\"", '').split('=')[-1]
 
-        teams.append([teamID, teamName, teamCountry])
+        teams.append([teamID,teamNick,teamName,teamCountry])
 
     # Create a Pandas DataFrame
-    teams = pd.DataFrame(teams, columns=['ID', 'Name', 'Country'])
+    teams = pd.DataFrame(teams, columns=['ID', 'Nick', 'Name', 'Country'])
     
     return teams
 
@@ -129,7 +129,7 @@ def getLineups(soup, matchID):
         playersID = [m[0] for m in re.findall(r'href="/player/(\d+)/([^"]+)"', str(line))][:-5]
         
         teamID = re.findall(r'href="/team/(\d+)/([^"]+)"', str(line))
-        teamID = teamID[0][0] + '/' + teamID[0][1] if teamID else ''
+        teamID = teamID[0][0] if teamID else ''
 
         teamRank = re.findall(r'#(\d+)', str(line))
         teamRank = int(teamRank[0])
