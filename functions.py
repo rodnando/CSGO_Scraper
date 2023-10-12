@@ -116,3 +116,91 @@ def getMaps(soup, html):
         matchMaps.append(ms)
 
     return matchMaps
+
+def getLineups(soup, matchID):
+    lineups = soup.find_all('div', attrs={'class':'lineups', 'id':'lineups'})
+    lines = lineups[0].find_all('div', attrs={'class':'lineup standard-box'})
+
+    Lineups = pd.DataFrame() # list to add players info
+
+    for line in lines:
+        lineup = re.findall(r'alt="([^"]+)"\s+class=', str(line))
+
+        playersID = [m[0] for m in re.findall(r'href="/player/(\d+)/([^"]+)"', str(line))][:-5]
+        
+        teamID = re.findall(r'href="/team/(\d+)/([^"]+)"', str(line))
+        teamID = teamID[0][0] + '/' + teamID[0][1] if teamID else ''
+
+        teamRank = re.findall(r'#(\d+)', str(line))
+        teamRank = int(teamRank[0])
+
+        lineup = pd.DataFrame(playersID, columns=['PlayerID'])
+        lineup['TeamID'] = teamID
+        lineup['TeamRank'] = teamRank
+        lineup['MatchID'] = matchID.split('/')[0]
+
+        Lineups = pd.concat([Lineups, lineup], axis=0)
+
+    return Lineups
+
+def getMatchInfos(soup, html, matchID):
+    
+    # Get maps info to query data from each map 
+    maps = getMaps(soup, html)
+
+    # Classes to query inside map infos, total stats, total stats CT side, total stats TR side
+    sides = ['table totalstats','table ctstats hidden','table tstats hidden']
+    sideNames = ['Total','CT','TR']
+
+    matchInfo = pd.DataFrame()
+
+    for map in maps:
+        matchInfos = soup.find('div', attrs={'class':'stats-content', 'id':map[0]})
+
+        # Get lineups to use as a main table to do joins
+        lineups = getLineups(soup, matchID)
+        lineups['MapName'] = map[1]
+        
+        # Looping to get stats from each side and the total 
+        for i, side in enumerate(sides):
+            stats = matchInfos.find_all('table', attrs={'class':side})
+
+            # Player ID
+            playersID = re.findall(r'/player/(\d+)/([^/]+)', str(stats))
+            playerID = list()
+            for r in playersID:
+                playerID.append(r[0])
+            
+            # Player Score
+            score = re.findall(r'class="plus-minus text-center gtSmartphone-only"><span class="[^"]*">(.*?)</span>', str(stats))
+            score = [int(score) for score in score]
+
+            # Kills and Deaths (KD)
+            kds = re.findall(r'class="kd text-center">(\d+-\d+)</td>', str(stats))
+            k = list()
+            d = list()
+            for kd in kds:
+                k.append(int(kd.split('-')[0]))
+                d.append(int(kd.split('-')[1]))
+            
+            # ADR
+            adr = re.findall(r'<td class="adr text-center">(\d+\.\d+)</td>', str(stats))
+            ADR = [float(adr) for adr in adr]
+
+            # KAST
+            kast = re.findall(r'<td class="kast text-center">([0-9]+\.[0-9]+%)</td>', str(stats))
+            KAST = [round(float(kast.split('.')[0]) / 100, 2) for kast in kast]
+
+            # Rating
+            ratings = re.findall(r'<td class="rating text-center">([0-9]+\.[0-9]+)</td>', str(stats))
+            rating = [round(float(rating), 2) for rating in ratings]
+
+            matchsInfo = [playerID, k, d, score, ADR, KAST, rating]
+            matchsInfo = pd.DataFrame(matchsInfo).transpose()
+            matchsInfo.columns = ['PlayerID', f'{sideNames[i]}_Kills', f'{sideNames[i]}_Deaths', f'{sideNames[i]}_Score', f'{sideNames[i]}_ADR', f'{sideNames[i]}_KAST', f'{sideNames[i]}_Rating']
+
+            lineups = pd.merge(lineups, matchsInfo, on='PlayerID', how='left')
+        
+        matchInfo = pd.concat([matchInfo, lineups], axis=0)
+
+    return matchInfo
