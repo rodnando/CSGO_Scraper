@@ -201,6 +201,6 @@ def getMatchInfos(soup, html, matchID):
 
             lineups = pd.merge(lineups, matchsInfo, on='PlayerID', how='left')
         
-        matchInfo = pd.concat([matchInfo, lineups], axis=0)
+        matchInfo = pd.concat([matchInfo, lineups], axis=0, ignore_index=True)
 
     return matchInfo

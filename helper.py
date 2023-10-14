@@ -53,3 +53,14 @@ def getDriverHTML(url):
     soup = BeautifulSoup(response, 'html.parser')
 
     return response, soup
+
+def concat_tags(tags):
+    # List to append results 
+    results = []
+
+    # Cycle through tags two by two and concatenate them
+    for i in range(0, len(tags), 2):
+        concatenated = BeautifulSoup(str(tags[i]) + str(tags[i + 1]), 'html.parser')
+        results.append(concatenated)
+
+    return results
