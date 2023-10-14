@@ -110,6 +110,9 @@ def getMaps(soup, html):
     mapIDs = re.findall('id=\".*\"', str(m))
     mapIDs = [mapID.replace('id="', '').replace('"', '') for mapID in mapIDs if 'all-content' not in mapID]
 
+    # Drop maps not played
+    maps = maps[:len(mapIDs)]
+
     for i in range(0, len(maps)):
         ms = (mapIDs[i], maps[i])
 
@@ -139,7 +142,7 @@ def getLineups(soup, matchID):
         lineup['TeamRank'] = teamRank
         lineup['MatchID'] = matchID.split('/')[0]
 
-        Lineups = pd.concat([Lineups, lineup], axis=0)
+        Lineups = pd.concat([Lineups, lineup], axis=0, ignore_index=True)
 
     return Lineups
 
