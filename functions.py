@@ -30,6 +30,8 @@ def getTeamsInfo(soup, html):
     lineups = soup.find_all('div', attrs={'class':'lineups', 'id':'lineups'})
     lines = lineups[0].find_all('div', attrs={'class':'lineup standard-box'})
 
+    if len(lines) < 1:
+        raise Exception('Fail to get data. Return is none.')
 
     teams = list()
 
@@ -69,6 +71,9 @@ def getPlayersInfo(soup):
     # This function goal is to get players info
     lineups = soup.find_all('div', attrs={'class':'lineups', 'id':'lineups'})
     lines = lineups[0].find_all('div', attrs={'class':'lineup standard-box'})
+
+    if len(lines) < 1:
+        raise Exception('Fail to get data. Return is none.') 
 
     players = pd.DataFrame() # DataFrame to add players info
 
@@ -124,6 +129,9 @@ def getLineups(soup, matchID):
     lineups = soup.find_all('div', attrs={'class':'lineups', 'id':'lineups'})
     lines = lineups[0].find_all('div', attrs={'class':'lineup standard-box'})
 
+    if len(lines) < 1:
+        raise Exception('Fail to get data. Return is none.')
+
     Lineups = pd.DataFrame() # list to add players info
 
     for line in lines:
@@ -160,6 +168,9 @@ def getMatchInfos(soup, html, matchID):
     for map in maps:
         matchInfos = soup.find('div', attrs={'class':'stats-content', 'id':map[0]})
 
+        if len(matchInfos) < 1:
+            raise Exception('Fail to get data about match infos. Return is none.')
+        
         # Get lineups to use as a main table to do joins
         lineups = getLineups(soup, matchID)
         lineups['MapName'] = map[1]
@@ -167,6 +178,9 @@ def getMatchInfos(soup, html, matchID):
         # Looping to get stats from each side and the total 
         for i, side in enumerate(sides):
             stats = matchInfos.find_all('table', attrs={'class':side})
+
+            if len(stats) < 1:
+                raise Exception(f'Fail to get data from side {side}. Return is none.')
 
             # Player ID
             playersID = re.findall(r'/player/(\d+)/([^/]+)', str(stats))
@@ -208,7 +222,7 @@ def getMatchInfos(soup, html, matchID):
 
     return matchInfo
 
-def getMatchOverview(soup, html):
+def getMatchOverview(soup, html, matchID):
     # This function goal is to get the match overview for each map, like winner, final score, etc.
     # Get teams to add to a DataFrame 
     teams = getTeamsInfo(soup, html)
@@ -217,6 +231,10 @@ def getMatchOverview(soup, html):
     MatchOverview = pd.DataFrame()
 
     matchOverview = soup.find_all('div', attrs={'class':'played'})
+    
+    if len(matchOverview) < 1:
+        raise Exception('Fail to get data. Return is none.')
+    
     matchOverviews = concat_tags(matchOverview)
 
     for i, match in enumerate(matchOverviews):
@@ -246,8 +264,8 @@ def getMatchOverview(soup, html):
             team1_over = 0
             team2_over = 0
 
-        columns = ['MapName','Team1','Team2','Team1_Pick','Team1_Win','Team1_Final_Score','Team2_Final_Score','Halfs_Played','Team1_Start_Side']
-        result = [mapName,int(teams[0]),int(teams[1]),team1Pick,team1Win,int(finalScore[0]),int(finalScore[1]),len(halfs),startSide]
+        columns = ['MatchID','MapName','Team1','Team2','Team1_Pick','Team1_Win','Team1_Final_Score','Team2_Final_Score','Halfs_Played','Team1_Start_Side']
+        result = [matchID.split('/')[0],mapName,int(teams[0]),int(teams[1]),team1Pick,team1Win,int(finalScore[0]),int(finalScore[1]),len(halfs),startSide]
 
         for i, half in enumerate(halfs):
             results = re.findall(r'class="(ct|t)">(\d+)</span>', str(half))
@@ -270,3 +288,103 @@ def getMatchOverview(soup, html):
         MatchOverview = pd.concat([MatchOverview, mapOverview], axis=0, ignore_index=True)
     
     return MatchOverview
+
+def getEconomyOverview(soup, html, matchID, overview, teams):
+    # Define final DF with the economic infos
+    economy_info = pd.DataFrame()
+
+    # Define params
+    id = matchID.split('/')[0]
+    
+    # Get Overview
+    over_id = overview.loc[overview['MatchID'] == int(id)]
+    over_id_ = over_id[['MatchID', 'Team1', 'Team2']].drop_duplicates()
+
+    # Get teams nicknames
+    match_params_df = over_id_.merge(teams, left_on='Team1', right_on='ID').merge(teams, left_on='Team2', right_on='ID')
+
+    match_params = match_params_df[['Team1', 'Team2', 'Nick_x', 'Nick_y']].drop_duplicates().values.tolist()[0]
+    versus = match_params[2] + '-vs-' + match_params[3]
+
+    # Get map info from match page
+    maps = getMaps(soup, html)
+
+    for Map in maps:
+        mapName = Map[1]
+        mapID = Map[0].split('-')[0]
+
+        url = f'https://www.hltv.org/stats/matches/economy/mapstatsid/{mapID}/{versus}'
+        
+        html, soup = getDriverHTML(url)
+        
+        # Checking if there is economy info for this map
+        problem = soup.find('div', attrs={'class':'standard-box padding'})
+        
+        if 'Economy not available' not in str(problem):
+            # Get rounds overview info
+            rounds_break = soup.find_all('div', attrs={'class':'col standard-box stats-rows'})
+
+            rounds_overview = list()
+            columns = ['Eco_Rounds','Eco_Rounds_Wons','Semi_Eco_Rounds','Semi_Eco_Rounds_Wons','Semi_Buy_Rounds','Semi_Buy_Rounds_Wons','Full_Buy_Rounds','Full_Buy_Rounds_Wons']
+
+            rounds_overview = list()
+            columns = ['MatchID','TeamID','MapName','Eco_Rounds','Eco_Rounds_Wons','Semi_Eco_Rounds','Semi_Eco_Rounds_Wons','Semi_Buy_Rounds','Semi_Buy_Rounds_Wons','Full_Buy_Rounds','Full_Buy_Rounds_Wons']
+
+            for i, round in enumerate(rounds_break):
+                results = re.findall(r'title="Played">(\d+)<span title="Won"> \((\d+)\)', str(round))
+
+                if i == 0:
+                    rounds_over = [id, match_params[0], mapName]
+                else:
+                    rounds_over = [id, match_params[1], mapName]
+
+                for r in results:
+                    rounds_over.append(r[0]) # Played
+                    rounds_over.append(r[1]) # Won
+
+                rounds_overview.append(rounds_over)
+
+            equip_info = soup.find_all('tr', attrs={'class':'team-categories'})
+
+            if len(equip_info) % 2 != 0:
+                print('Error!')
+
+            equip1_info = list()
+            equip2_info = list()
+
+            for i in range(0, len(equip_info)):
+                if i % 2 == 0:
+                    equip1_info.append(str(equip_info[i]))
+                else:
+                    equip2_info.append(str(equip_info[i]))
+
+            if len(equip1_info) != len(equip2_info):
+                print('Error!')
+
+            for info in equip1_info:
+                results = re.findall(r'title="Equipment value: (\d+)"><img class="equipment-category(.*?)" src="', str(info))
+                
+                for i, r in enumerate(results):
+                    rounds_overview[0].append(r[0])
+                    rounds_overview[0].append(False if 'lost' in r[1].strip() else True)
+
+            for info in equip2_info:
+                results = re.findall(r'title="Equipment value: (\d+)"><img class="equipment-category(.*?)" src="', str(info))
+                
+                for i, r in enumerate(results):
+                    rounds_overview[1].append(r[0])
+                    rounds_overview[1].append(False if 'lost' in r[1].strip() else True)
+
+            # Add new columns (spent and result)
+            for i in range(0, int((len(rounds_overview[0])-11) / 2)):
+                columns.append(f'Round{i+1}_Spent')
+                columns.append(f'Round{i+1}_Result')
+
+            economy = pd.DataFrame(rounds_overview)
+            economy.columns = columns
+
+            economy_info = pd.concat([economy_info, economy])
+        else:
+            print('No results for map {} in macthID: {}!'.format(mapName, matchID))
+
+    return economy_info

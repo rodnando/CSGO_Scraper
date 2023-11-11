@@ -4,6 +4,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen
+import pandas as pd
 import urllib.request
 import csv
 import sys
@@ -39,7 +40,7 @@ def getDriverHTML(url):
 
     # Set Chrome driver
     driver = webdriver.Chrome()
-    driver.implicitly_wait(0.5) # wait 0.5s
+    driver.implicitly_wait(0.3) # wait in seconds
 
     driver.get(url)
     
@@ -64,3 +65,22 @@ def concat_tags(tags):
         results.append(concatenated)
 
     return results
+
+def tabulate(file, NewData):
+    # This function goal is to add new data in the existing file
+    try:
+        # Get existing data
+        existingData = pd.read_csv(rf'data/{file}.csv', sep=',', encoding='utf-8')
+
+        # Concat both new and old data
+        NewData = pd.concat([existingData, NewData], axis=0)
+
+        NewData = NewData.drop_duplicates() # remove duplicates
+    
+    except:
+        print('File not found.')
+    
+    finally:
+        # Save new file
+        NewData.to_csv(rf'data/{file}.csv', encoding='utf-8', index=False)
+        print('File saved!')

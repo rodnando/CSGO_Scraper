@@ -1,40 +1,69 @@
 from functions import *
+from helper import tabulate
+import pandas as pd
 import time 
 
-st = time.time() # setting start time
-
-# Getting Match Ids
-print('Getting match IDs from HLTV.org...')
-
 # Find last match ID to use as stop
-existingMatchIDs = pd.read_csv(r'C:\Users\nando\OneDrive\Documentos\Fernando\Projects\CSGO_Scraper\data\MatchIDs.csv', sep=',', encoding='utf-8')
-offset = 100
-page = 1
+existingMatchIDs = pd.read_csv(r'data\MatchIDs.csv', sep=',', encoding='utf-8')
+existingOverview = pd.read_csv(r'data\MatchIDs.csv', sep=',', encoding='utf-8')
 
-#existingMatchIDs = pd.DataFrame()
+# Getting matchIds without overview
+newMatches = list()
+overv = existingOverview.MatchID.drop_duplicates().values.tolist()
+for m in existingMatchIDs.Tittle:
+    if int(m.split('/')[0]) not in overv:
+        newMatches.append(m)
 
-while page < 1000:
+track = 1
+start_time = time.time() # variable to tracking time execution
 
-    newMatchIds = getMatchIDs(offset)
-   
-    existingMatchIDs = pd.concat([existingMatchIDs, newMatchIds], axis=0)
+for matchID in newMatches:
+    print('Start execution number {}...'.format(track))
+    # Complete matches URL with the match ID
+    print('Getting match infos for {}...'.format(matchID))
+    url = f'https://www.hltv.org/matches/{matchID}'
+    html, soup = getDriverHTML(url)
 
-    existingMatchIDs = existingMatchIDs.astype({'ID': 'int'})
+    print('Getting teams info...') 
+    try:    
+        teams = getTeamsInfo(soup, html)
+        print('Saving data...')
+        tabulate('teams', teams)
+    except Exception as e:
+        print(e)
+    
+    print('Getting players info...')
+    try:
+        players = getPlayersInfo(soup)
+        print('Saving data...')
+        tabulate('players', players)
+    except Exception as e:
+        print(e)
 
-    print('{} new matches tabulated. Total matches: {}.'.format(len(newMatchIds), len(existingMatchIDs)))
-    print('Page: {}; Offset: {}'.format(page, offset))
+    print('Getting match overview...')
+    try:
+        overview = getMatchOverview(soup, html, matchID)
+        print('Saving data...')
+        tabulate("matchOverview", overview)
+    except Exception as e:
+        print(e)
+    
+    print('Getting match infos...')
+    try:
+        matchInfo = getMatchInfos(soup, html, matchID)
+        print('Saving data...')
+        tabulate("matchInfos", matchInfo)
+    except Exception as e:
+        print(e)
+    
+    print('Getting economy infos...')
+    try:
+        economy = getEconomyOverview(soup, html, matchID, overview, teams)
+        print('Saving...')
+        tabulate("matchEconomy", economy)
+    except Exception as e:
+        print(e)
 
-    offset += 100
-    page += 1
+    print('Execution for {} ended. Total time execution: {} minutes.'.format(matchID, round((time.time() - start_time)/60, 3)))
 
-MatchIDs = existingMatchIDs.drop_duplicates()
-
-print('Total rows: {}. Total rows after drop duplicates: {}. Total removed rows: {}.'.format(len(existingMatchIDs), len(MatchIDs), len(existingMatchIDs) - len(MatchIDs)))
-
-MatchIDs.to_csv('data\MatchIDs.csv', encoding='utf-8', index=False)
-
-et = time.time() # setting end time
-
-print('Total time execution: {} minutes.'.format(round((et - st) / 60), 3))
-
-### TAMBÉM CONSIGO PEGAR OS PLAYERS. EXEMPLO: https://www.hltv.org/player/13290/demonos
+    track += 1
