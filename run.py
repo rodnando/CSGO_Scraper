@@ -4,8 +4,8 @@ import pandas as pd
 import time 
 
 # Find last match ID to use as stop
-existingMatchIDs = pd.read_csv(r'data\MatchIDs.csv', sep=',', encoding='utf-8')
-existingOverview = pd.read_csv(r'data\MatchIDs.csv', sep=',', encoding='utf-8')
+existingMatchIDs = pd.read_csv(r'data\matchIDs.csv', sep=',', encoding='utf-8')
+existingOverview = pd.read_csv(r'data\matchOverview.csv', sep=',', encoding='utf-8')
 
 # Getting matchIds without overview
 newMatches = list()
